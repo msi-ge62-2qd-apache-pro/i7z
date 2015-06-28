@@ -62,7 +62,7 @@ void logCpuCstates_dual(float value, int);
 void logCpuCstates_dual_c(char* value, int);
 void logCpuCstates_dual_ts(struct timespec  *value, int) ;
 
-struct cpu_heirarchy_info {
+struct cpu_hierarchy_info {
     int max_online_cpu;
     int num_sockets;
     int sibling_num[MAX_HI_PROCESSORS];
@@ -142,25 +142,25 @@ void get_CPUs_info (unsigned int *num_Logical_OS,
 #endif
 
 int get_number_of_present_cpu();
-void get_candidate_cores(struct cpu_heirarchy_info* chi);
-void get_online_cpus(struct cpu_heirarchy_info* chi);
-void get_siblings_list(struct cpu_heirarchy_info* chi);
-void get_package_ids(struct cpu_heirarchy_info* chi);
-void print_cpu_list(struct cpu_heirarchy_info chi);
-void construct_cpu_hierarchy(struct cpu_heirarchy_info *chi);
+void get_candidate_cores(struct cpu_hierarchy_info* chi);
+void get_online_cpus(struct cpu_hierarchy_info* chi);
+void get_siblings_list(struct cpu_hierarchy_info* chi);
+void get_package_ids(struct cpu_hierarchy_info* chi);
+void print_cpu_list(struct cpu_hierarchy_info chi);
+void construct_cpu_hierarchy(struct cpu_hierarchy_info *chi);
 void Print_Information_Processor(bool*, bool*, bool*, bool*);
 void Test_Or_Make_MSR_DEVICE_FILES();
 
 
 int check_and_return_processor(char*strinfo);
 int check_and_return_physical_id(char*strinfo);
-void construct_sibling_list(struct cpu_heirarchy_info* chi);
-void construct_socket_information(struct cpu_heirarchy_info* chi,
+void construct_sibling_list(struct cpu_hierarchy_info* chi);
+void construct_socket_information(struct cpu_hierarchy_info* chi,
         struct cpu_socket_info* socket_0,struct cpu_socket_info* socket_1,
         int, int);
 void print_socket_information(struct cpu_socket_info* socket);
-void construct_CPU_Heirarchy_info(struct cpu_heirarchy_info* chi);
-void print_CPU_Heirarchy(struct cpu_heirarchy_info chi);
+void construct_CPU_Hierarchy_info(struct cpu_hierarchy_info* chi);
+void print_CPU_Hierarchy(struct cpu_hierarchy_info chi);
 int in_core_list(int ii,int* core_list);
 void Print_Version_Information();
 bool file_exists(char*);
@@ -179,3 +179,36 @@ bool file_exists(char*);
 #define IS_THIS_BETWEEN_0_100(cond) (cond>=-1 && cond <=125 && !isinf(cond) && !isnan(cond))? 0: 1
 
 #define THRESHOLD_BETWEEN_0_6000(cond) (cond>=0 && cond <=10000)? cond: __builtin_inf()
+
+//Try the Makedev script
+//sourced from MAKEDEV-cpuid-msr script in msr-tools
+#define MAKEDEV_CPUID_MSR_SH "\
+	#! /bin/bash	\n\
+	msr_major=202;	\n\
+	cpuid_major=203;\n\
+	n=0;			\n\
+	while [ $n -lt 16 ]; do \n\
+		mkdir -m 0755 -p /dev/cpu/$n; \n\
+		mknod /dev/cpu/$n/msr -m 0600 c $msr_major $n; \n\
+		mknod /dev/cpu/$n/cpuid -m 0444 c $cpuid_major $n; \n\
+		n=$((n + 1)); \n\
+	done; \n\
+"
+
+//CPUINFO is wrong for i7 but correct for the number of physical and logical cores present
+//If Hyperthreading is enabled then, multiple logical processors will share a common CORE ID
+//http://www.redhat.com/magazine/022aug06/departments/tips_tricks/
+#define CPUINFO_SH "									\
+awk 'BEGIN{												\
+		exit_value=1;									\
+	}													\
+	{													\
+		if ($0 ~ /^cpu[[:blank:]]+MHz[[:blank:]]+:/) {	\
+			print $0;									\
+			exit_value=0;								\
+		}												\
+	}													\
+	END{												\
+		exit (exit_value);								\
+	}' /proc/cpuinfo >/tmp/cpufreq.txt; 				\
+"

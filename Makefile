@@ -39,17 +39,13 @@ mandir ?= $(prefix)/share/man/
 
 all: clean test_exist
 
-message:
-	@echo "If the compilation complains about not finding ncurses.h, install ncurses (libncurses5-dev on ubuntu/debian)"
-
-bin: message $(OBJ)
+bin: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(OBJ) $(LIBS)
 
-#http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=644728 for -ltinfo on debian
-static-bin: message $(OBJ)
+static-bin: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(OBJ) -static-libgcc -DNCURSES_STATIC -static -lpthread -lncurses -lrt -lm -ltinfo
 
-# perfmon-bin: message $(OBJ)
+# perfmon-bin: $(OBJ)
 # 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(PERFMON-BIN) perfmon-i7z.c helper_functions.c $(LIBS)
 
 test_exist: bin
@@ -65,4 +61,4 @@ install:  $(BIN)
 	install -D -m 0644 doc/i7z.man $(DESTDIR)$(mandir)man1/i7z.1
 	install -D -m 755 $(BIN) $(DESTDIR)$(sbindir)$(BIN)
 	install -d $(DESTDIR)$(docdir)
-	install -m 0644 README.txt put_cores_offline.sh put_cores_online.sh MAKEDEV-cpuid-msr $(DESTDIR)$(docdir)
+	install -m 0644 README.txt put_cores_offline.sh put_cores_online.sh $(DESTDIR)$(docdir)

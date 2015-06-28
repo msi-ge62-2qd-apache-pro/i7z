@@ -378,8 +378,7 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
     //if (equal_string) {
         printf ("i7z DEBUG: Found Intel Processor\n");
     } else {
-        printf
-        ("this was designed to be an intel proc utility. You can perhaps mod it for your machine?\n");
+        fprintf (stderr, "i7z DEBUG: Unsupported CPU - this is an Intel specific processor monitoring utility\n", __LINE__);
         exit (1);
     }
 
@@ -497,8 +496,8 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
             //exit (1);
         }
     } else {
-        printf ("i7z DEBUG: Unknown processor, not exactly based on Nehalem\n");
-        printf ("If you are using an AMD processor, I highly recommend TurionPowerControl http://code.google.com/p/turionpowercontrol/\n");
+        fprintf (stderr, "i7z DEBUG: Unknown processor, not exactly based on Nehalem\n", __LINE__);
+        fprintf (stderr, "If you are using an AMD processor, I highly recommend TurionPowerControl http://code.google.com/p/turionpowercontrol/\n", __LINE__);
         exit (1);
     }
 
@@ -517,51 +516,40 @@ void Test_Or_Make_MSR_DEVICE_FILES()
             //Do nothing.
             printf ("i7z DEBUG: You have write permissions to msr device files\n");
         } else {
-            printf ("i7z DEBUG: You DO NOT have write permissions to msr device files\n");
-            printf ("i7z DEBUG: A solution is to run this program as root\n");
+            fprintf (stderr, "i7z DEBUG: You DO NOT have write permissions to msr device files\n", __LINE__);
+            fprintf (stderr, "i7z DEBUG: A solution is to run this program as root\n", __LINE__);
             exit (1);
         }
     } else {
         printf ("i7z DEBUG: msr device files DO NOT exist, trying out a makedev script\n");
         if (geteuid () == 0)
         {
-            //Try the Makedev script
-            //sourced from MAKEDEV-cpuid-msr script in msr-tools
-            system ("msr_major=202; \
-							cpuid_major=203; \
-							n=0; \
-							while [ $n -lt 16 ]; do \
-								mkdir -m 0755 -p /dev/cpu/$n; \
-								mknod /dev/cpu/$n/msr -m 0600 c $msr_major $n; \
-								mknod /dev/cpu/$n/cpuid -m 0444 c $cpuid_major $n; \
-								n=`expr $n + 1`; \
-							done; \
-							");
+            (void)(system(MAKEDEV_CPUID_MSR_SH)+1);
             printf ("i7z DEBUG: modprobbing for msr\n");
-            system ("modprobe msr");
+            if (system ("modprobe msr") == -1)
+				fprintf (stderr, "i7z DEBUG: modprobbing for msr failed - do you have CONFIG_X86_MSR option enabled for your kernel?\n", __LINE__);
         } else {
-            printf ("i7z DEBUG: You DO NOT have root privileges, mknod to create device entries won't work out\n");
-            printf ("i7z DEBUG: A solution is to run this program as root\n");
+            fprintf (stderr, "i7z DEBUG: You DO NOT have root privileges, mknod to create device entries won't work out\n", __LINE__);
+            fprintf (stderr, "i7z DEBUG: A solution is to run this program as root\n", __LINE__);
             exit (1);
         }
     }
 }
+
 double cpufreq_info()
 {
-    //CPUINFO is wrong for i7 but correct for the number of physical and logical cores present
-    //If Hyperthreading is enabled then, multiple logical processors will share a common CORE ID
-    //http://www.redhat.com/magazine/022aug06/departments/tips_tricks/
-    system
-    ("cat /proc/cpuinfo |grep MHz|sed 's/cpu\\sMHz\\s*:\\s//'|tail -n 1 > /tmp/cpufreq.txt");
-
-
     //Open the parsed cpufreq file and obtain the cpufreq from /proc/cpuinfo
-    FILE *tmp_file;
-    tmp_file = fopen ("/tmp/cpufreq.txt", "r");
-    char tmp_str[30];
-    fgets (tmp_str, 30, tmp_file);
-    fclose (tmp_file);
-    return atof(tmp_str);
+	char tmp_str[30];
+	tmp_str[0]='\0';
+	if (system(CPUINFO_SH) != -1) {
+		FILE *tmp_file;
+		tmp_file = fopen ("/tmp/cpufreq.txt", "r");
+		if (fgets (tmp_str, 30, tmp_file) == NULL) {
+			tmp_str[0]='\0';
+		}
+		fclose (tmp_file);
+	}
+	return atof(tmp_str);
 }
 
 int check_and_return_processor(char*strinfo)
@@ -600,7 +588,7 @@ int check_and_return_core_id(char*strinfo)
     }
 }
 
-void construct_sibling_list(struct cpu_heirarchy_info* chi)
+void construct_sibling_list(struct cpu_hierarchy_info* chi)
 {
     int i,j,core_id,socket_id;
     for (i=0;i< chi->max_online_cpu ;i++) {
@@ -633,7 +621,7 @@ void construct_sibling_list(struct cpu_heirarchy_info* chi)
     }
 }
 
-void construct_socket_information(struct cpu_heirarchy_info* chi,
+void construct_socket_information(struct cpu_hierarchy_info* chi,
     struct cpu_socket_info* socket_0,struct cpu_socket_info* socket_1,
     int socket_0_num, int socket_1_num)
 {
@@ -683,13 +671,14 @@ void print_socket_information(struct cpu_socket_info* socket)
     for (i=0;i< socket->max_cpu ;i++) {
         assert(i < MAX_SK_PROCESSORS);
         if (socket->processor_num[i]!=-1) {
-            sprintf(socket_list,"%s%d,",socket_list,socket->processor_num[i]);
+            sprintf(socket_list,"%s%d",socket_list,socket->processor_num[i]+1);
         }
     }
-    printf("Socket-%d [num of cpus %d physical %d logical %d] %s\n",socket->socket_num,socket->max_cpu,socket->num_physical_cores,socket->num_logical_cores,socket_list);
+    if (socket->max_cpu != 0)
+		printf("Socket-%d [number of cpus: %d physical: %d logical: %d] %s\n",socket->socket_num,socket->max_cpu,socket->num_physical_cores,socket->num_logical_cores,socket_list);
 }
 
-void construct_CPU_Heirarchy_info(struct cpu_heirarchy_info* chi)
+void construct_CPU_Hierarchy_info(struct cpu_hierarchy_info* chi)
 {
     FILE *fp = fopen("/proc/cpuinfo","r");
     char strinfo[200];
@@ -736,7 +725,7 @@ void construct_CPU_Heirarchy_info(struct cpu_heirarchy_info* chi)
     fclose(fp);
 }
 
-void print_CPU_Heirarchy(struct cpu_heirarchy_info chi)
+void print_CPU_Hierarchy(struct cpu_hierarchy_info chi)
 {
     int i;
     printf("\n------------------------------\n--[core id]--- Other information\n-------------------------------------\n");

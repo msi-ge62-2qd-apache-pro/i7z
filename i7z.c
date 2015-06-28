@@ -21,7 +21,7 @@
 #include <ncurses.h>
 #include "getopt.h"
 #include "i7z.h"
-//#include "CPUHeirarchy.h"
+//#include "CPUHierarchy.h"
 
 struct program_options prog_options;
 char* CPU_FREQUENCY_LOGGING_FILE_single="cpu_freq_log.txt";
@@ -184,11 +184,11 @@ void logCpuFreq_single_ts(struct timespec  *value) //HW use timespec to avoid fl
 {
     //below when just logging
     if(prog_options.logging==1) {
-        fprintf(fp_log_file_freq,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+        fprintf(fp_log_file_freq,"%d.%.9d\n",(int)value->tv_sec,(int)value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
     //below when appending
     if(prog_options.logging==2) {
-        fprintf(fp_log_file_freq,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+        fprintf(fp_log_file_freq,"%d.%.9d\t",(int)value->tv_sec,(int)value->tv_nsec);
     }
 }
 
@@ -264,20 +264,20 @@ void logCpuFreq_dual_ts(struct timespec  *value, int socket_num) //HW use timesp
     if(socket_num==0){
         //below when just logging
         if(prog_options.logging==1)
-            fprintf(fp_log_file_freq_1,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_freq_1,"%d.%.9d\n",(int)value->tv_sec,(int)value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
 
         //below when appending
         if(prog_options.logging==2)
-             fprintf(fp_log_file_freq_1,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+             fprintf(fp_log_file_freq_1,"%d.%.9d\t",(int)value->tv_sec,(int)value->tv_nsec);
     }
     if(socket_num==1){
         //below when just logging
         if(prog_options.logging==1)
-            fprintf(fp_log_file_freq_2,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_freq_2,"%d.%.9d\n",(int)value->tv_sec,(int)value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
 
         //below when appending
         if(prog_options.logging==2)
-             fprintf(fp_log_file_freq_2,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+             fprintf(fp_log_file_freq_2,"%d.%.9d\t",(int)value->tv_sec,(int)value->tv_nsec);
     }
 }
 
@@ -315,7 +315,7 @@ void logCpuCstates_single_ts(struct timespec  *value) //HW use timespec to avoid
 {
     //below when just logging
     if(prog_options.logging != 0) {
-        fprintf(fp_log_file_Cstates,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+        fprintf(fp_log_file_Cstates,"%d.%.9d",(int)value->tv_sec,(int)value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
 }
 
@@ -366,27 +366,26 @@ void logCpuCstates_dual_ts(struct timespec  *value, int socket_num) //HW use tim
     if(socket_num==0){
         //below when just logging
         if(prog_options.logging != 0)
-            fprintf(fp_log_file_Cstates_1,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_Cstates_1,"%d.%.9d",(int)value->tv_sec,(int)value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
     if(socket_num==1){
         //below when just logging
         if(prog_options.logging != 0)
-            fprintf(fp_log_file_Cstates_2,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_Cstates_2,"%d.%.9d",(int)value->tv_sec,(int)value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
 }
-
 
 
 
 void atexit_runsttysane()
 {
     printf("Quitting i7z\n");
-    system("stty sane");
+    (void)(system("stty sane")+1);
 }
 
-void modprobing_msr()
+int modprobing_msr()
 {
-    system("modprobe msr");
+    return system("modprobe msr");
 }
 
 void init_ncurses()
@@ -414,7 +413,7 @@ int main (int argc, char **argv)
     char log_file_name[MAX_FILENAME_LENGTH], log_file_name2[MAX_FILENAME_LENGTH+3];
     prog_options.logging=0; //0=no logging, 1=logging, 2=appending
 
-    struct cpu_heirarchy_info chi;
+    struct cpu_hierarchy_info chi;
     struct cpu_socket_info socket_0={.max_cpu=0, .socket_num=0, .processor_num={-1,-1,-1,-1,-1,-1,-1,-1}};
     struct cpu_socket_info socket_1={.max_cpu=0, .socket_num=1, .processor_num={-1,-1,-1,-1,-1,-1,-1,-1}};
 
@@ -525,7 +524,7 @@ int main (int argc, char **argv)
                 printf("Example: To print for two sockets and also change the log file %c[%d;%d;%dm./i7z --socket0 0 --socket1 1 -logfile /tmp/logfilei7z -w l\n", 0x1B, 1, 31, 40);
                 printf("%c[%dm",0x1B,0);
 
-                exit(1);
+                exit(0);
                 break;
         }
     }
@@ -577,9 +576,9 @@ int main (int argc, char **argv)
     */
     ///////////////////////////////////////////////////////////
 
-    construct_CPU_Heirarchy_info(&chi);
+    construct_CPU_Hierarchy_info(&chi);
     construct_sibling_list(&chi);
-    print_CPU_Heirarchy(chi);
+    print_CPU_Hierarchy(chi);
     construct_socket_information(&chi, &socket_0, &socket_1, socket_0_num, socket_1_num);
     print_socket_information(&socket_0);
     print_socket_information(&socket_1);
