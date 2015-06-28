@@ -342,7 +342,10 @@ void get_CPUs_info (unsigned int *num_Logical_OS,
 
 void Print_Version_Information()
 {
-	printf ("i7z DEBUG: i7z version: %s\n",i7z_VERSION_INFO);
+	printf ("i7z DEBUG: i7z version ...\n");
+	printf ("i7z DEBUG:   Commit %s\n", VERSION);
+	printf ("i7z DEBUG:   %s\n", AUTHOR);
+	printf ("i7z DEBUG:     '%s'\n\n", MESSAGE);
 }
 
 

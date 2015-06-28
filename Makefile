@@ -2,12 +2,17 @@
 # Makefile for i7z, GPL v2, License in COPYING
 #
 
+GIT_VERSION := $(shell git log --max-count 1 --pretty=format:"%H ( %cd )%n")
+GIT_AUTHOR := $(shell git log --max-count 1 --pretty=format:"%cn%n ( %ce )%n")
+GIT_MESSAGE := $(shell git log --max-count 1 --pretty=format:"%s%n")
+
 #makefile updated from patch by anestling
 
 #explicitly disable two scheduling flags as they cause segfaults, two more seem to crash the GUI version so putting them
 #here 
 CFLAGS_FOR_AVOIDING_SEG_FAULT = -fno-schedule-insns2  -fno-schedule-insns -fno-inline-small-functions -fno-caller-saves
 CFLAGS ?= -O3
+CFLAGS += -DVERSION='"$(GIT_VERSION)"' -DAUTHOR='"$(GIT_AUTHOR)"' -DMESSAGE='"${GIT_MESSAGE}"' 
 CFLAGS += $(CFLAGS_FOR_AVOIDING_SEG_FAULT) -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DBUILD_MAIN -Wimplicit-function-declaration
 
 LBITS := $(shell getconf LONG_BIT)

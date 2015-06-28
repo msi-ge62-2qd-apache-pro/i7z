@@ -423,22 +423,25 @@ int main (int argc, char **argv)
     //char *cvalue = NULL;
     //static bool logging_val_append=false, logging_val_replace=false;
     bool presupplied_socket_info = false;
+	bool only_display_version=false;
 
     static struct option long_options[]=
     {
-        {"write", required_argument, 0, 'w'},
-        {"socket0", required_argument,0 ,'z'},
-        {"socket1", required_argument,0 ,'y'},
-        {"logfile", required_argument,0,'l'},
-        {"help", no_argument, 0, 'h'},
-        {"nogui", no_argument, 0, 'n'}
+        {"write",	required_argument,	0, 'w'},
+		{"version",	no_argument,		0, 'v'},
+		{"socket0",	required_argument,	0, 'z'},
+        {"socket1",	required_argument,	0, 'y'},
+        {"logfile",	required_argument,	0, 'l'},
+        {"help",	no_argument,		0, 'h'},
+        {"nogui",	no_argument,		0, 'n'},
+		{0, 0, 0, 0}
     };
 
     prog_options.logging = 0;
     while(1)
     {
         int option_index = 0;
-        c = getopt_long(argc, argv,"w:z:y:l:hn", long_options, &option_index);
+		c = getopt_long(argc, argv,"w:vz:y:l:hn", long_options, &option_index);
         if (c==-1)
             break;
         switch(c)
@@ -448,11 +451,13 @@ int main (int argc, char **argv)
                 presupplied_socket_info = true;
                 printf("Socket_0 information will be about socket %d\n", socket_0.socket_num);
                 break;
+
             case 'y':
                 socket_1_num = atoi(optarg);
                 presupplied_socket_info = true;
                 printf("Socket_1 information will be about socket %d\n", socket_1.socket_num);
                 break;
+
             case 'w':
                 //printf("write options specified %s\n", optarg);
                 if (strcmp("l",optarg)==0)
@@ -466,6 +471,11 @@ int main (int argc, char **argv)
                     printf("Logging is ON and set to append\n");
                 }
                 break;
+
+			case 'v':
+				only_display_version=true;
+				break;
+
             case 'l':
                 strncpy(log_file_name, optarg, MAX_FILENAME_LENGTH-3);
                 strcpy(log_file_name2, log_file_name);
@@ -482,7 +492,13 @@ int main (int argc, char **argv)
 
             case 'h':
                 printf("\ni7z Tool Supports the following functions:\n");
-                printf("Append to a log file:  ");
+ 				printf("Display version information only and exit:  ");
+                printf("%c[%d;%d;%dm./i7z --version ", 0x1B,1,31,40);
+                printf("%c[%dm[OR] ",0x1B,0);
+                printf("%c[%d;%d;%dm./i7z -v \n", 0x1B,1,31,40);
+                printf("%c[%dm",0x1B,0);
+
+				printf("Append to a log file:  ");
                 printf("%c[%d;%d;%dm./i7z --write a ", 0x1B,1,31,40);
                 printf("%c[%dm[OR] ",0x1B,0);
                 printf("%c[%d;%d;%dm./i7z -w a\n", 0x1B,1,31,40);
@@ -517,8 +533,10 @@ int main (int argc, char **argv)
     Print_Version_Information();
 
     Print_Information_Processor (&prog_options.i7_version.nehalem, &prog_options.i7_version.sandy_bridge, &prog_options.i7_version.ivy_bridge, &prog_options.i7_version.haswell);
+	if (only_display_version)
+		exit(0);
 
-//	printf("nehalem %d, sandy brdige %d\n", prog_options.i7_version.nehalem, prog_options.i7_version.sandy_bridge);
+//	printf("nehalem %d, sandy bridge %d\n", prog_options.i7_version.nehalem, prog_options.i7_version.sandy_bridge);
 
     Test_Or_Make_MSR_DEVICE_FILES ();
     modprobing_msr();
