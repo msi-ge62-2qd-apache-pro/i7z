@@ -4,7 +4,7 @@
 
 GIT_VERSION := $(shell git log --max-count 1 --pretty=format:"%H ( %cd )%n")
 GIT_AUTHOR := $(shell git log --max-count 1 --pretty=format:"%cn%n ( %ce )%n")
-GIT_MESSAGE := $(shell git log --max-count 1 --pretty=format:"%s%n")
+GIT_MESSAGE := $(shell git log --max-count 1 --pretty=format:"%s%n" | sed -e 's/['\''"]//g')
 
 #makefile updated from patch by anestling
 
