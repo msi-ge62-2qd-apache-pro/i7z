@@ -343,9 +343,9 @@ void get_CPUs_info (unsigned int *num_Logical_OS,
 void Print_Version_Information()
 {
 	printf ("i7z DEBUG: i7z version ...\n");
-	printf ("i7z DEBUG:   Commit %s\n", VERSION);
-	printf ("i7z DEBUG:   %s\n", AUTHOR);
-	printf ("i7z DEBUG:     '%s'\n\n", MESSAGE);
+	printf ("i7z DEBUG:   Commit %s\n", (char*) VERSION);
+	printf ("i7z DEBUG:   %s\n", (char*) AUTHOR);
+	printf ("i7z DEBUG:     '%s'\n\n", (char*) MESSAGE);
 }
 
 
@@ -378,7 +378,7 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
     //if (equal_string) {
         printf ("i7z DEBUG: Found Intel Processor\n");
     } else {
-        fprintf (stderr, "i7z DEBUG: Unsupported CPU - this is an Intel specific processor monitoring utility\n", __LINE__);
+        fprintf (stderr, "i7z DEBUG: Unsupported CPU - this is an Intel specific processor monitoring utility\n");
         exit (1);
     }
 
@@ -496,8 +496,8 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
             //exit (1);
         }
     } else {
-        fprintf (stderr, "i7z DEBUG: Unknown processor, not exactly based on Nehalem\n", __LINE__);
-        fprintf (stderr, "If you are using an AMD processor, I highly recommend TurionPowerControl http://code.google.com/p/turionpowercontrol/\n", __LINE__);
+        fprintf (stderr, "i7z DEBUG: Unknown processor, not exactly based on Nehalem\n");
+        fprintf (stderr, "If you are using an AMD processor, I highly recommend TurionPowerControl http://code.google.com/p/turionpowercontrol/\n");
         exit (1);
     }
 
@@ -516,8 +516,8 @@ void Test_Or_Make_MSR_DEVICE_FILES()
             //Do nothing.
             printf ("i7z DEBUG: You have write permissions to msr device files\n");
         } else {
-            fprintf (stderr, "i7z DEBUG: You DO NOT have write permissions to msr device files\n", __LINE__);
-            fprintf (stderr, "i7z DEBUG: A solution is to run this program as root\n", __LINE__);
+            fprintf (stderr, "i7z DEBUG: You DO NOT have write permissions to msr device files\n");
+            fprintf (stderr, "i7z DEBUG: A solution is to run this program as root\n");
             exit (1);
         }
     } else {
@@ -527,10 +527,10 @@ void Test_Or_Make_MSR_DEVICE_FILES()
             (void)(system(MAKEDEV_CPUID_MSR_SH)+1);
             printf ("i7z DEBUG: modprobbing for msr\n");
             if (system ("modprobe msr") == -1)
-				fprintf (stderr, "i7z DEBUG: modprobbing for msr failed - do you have CONFIG_X86_MSR option enabled for your kernel?\n", __LINE__);
+				fprintf (stderr, "i7z DEBUG: modprobbing for msr failed - do you have CONFIG_X86_MSR option enabled for your kernel?\n");
         } else {
-            fprintf (stderr, "i7z DEBUG: You DO NOT have root privileges, mknod to create device entries won't work out\n", __LINE__);
-            fprintf (stderr, "i7z DEBUG: A solution is to run this program as root\n", __LINE__);
+            fprintf (stderr, "i7z DEBUG: You DO NOT have root privileges, mknod to create device entries won't work out\n");
+            fprintf (stderr, "i7z DEBUG: A solution is to run this program as root\n");
             exit (1);
         }
     }
