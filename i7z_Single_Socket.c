@@ -588,6 +588,8 @@ void print_i7z_socket_single(struct cpu_socket_info socket_0, int printw_offset,
 
         logCpuCstates_single_ts( &global_ts);
 
+        logCpuTemperature_single_ts( &global_ts);
+
         for (ii = 0; ii < numCPUs; ii++) {
             assert(ii < MAX_SK_PROCESSORS);
             i = core_list[ii];
@@ -597,6 +599,9 @@ void print_i7z_socket_single(struct cpu_socket_info socket_0, int printw_offset,
             if ( (print_core[ii]) && !isinf(_FREQ[i]) ) {
                 logCpuFreq_single(_FREQ[i]);
             }
+
+            logCpuTemperature_single(Read_Thermal_Status_CPU(i));
+
             logCpuCstates_single_c(" [");
             logCpuCstates_single((float)THRESHOLD_BETWEEN_0_100(C0_time[i] * 100));  logCpuCstates_single_c(",");
             c1_time = C1_time[i] * 100 - (C3_time[i] + C6_time[i] + C7_time[i]) * 100;

@@ -28,6 +28,8 @@ char* CPU_FREQUENCY_LOGGING_FILE_single="cpu_freq_log.txt";
 char* CPU_FREQUENCY_LOGGING_FILE_dual="cpu_freq_log_dual_%d.txt";
 char* CSTATE_LOGGING_FILE_single="cpu_cstate_log.txt";
 char* CSTATE_LOGGING_FILE_dual="cpu_cstate_log_dual_%d.txt";
+char* CPU_TEMPERATURE_LOGGING_FILE_single="cpu_temperature_log.txt";
+char* CPU_TEMPERATURE_LOGGING_FILE_dual="cpu_temperature_log_dual_%d.txt";
 
 int Single_Socket();
 int Dual_Socket();
@@ -42,14 +44,19 @@ FILE *fp_log_file_freq_1, *fp_log_file_freq_2;
 FILE *fp_log_file_Cstates;
 FILE *fp_log_file_Cstates_1, *fp_log_file_Cstates_2;
 
+FILE *fp_log_file_temperature;
+FILE *fp_log_file_temperature_1, *fp_log_file_temperature_2;
+
 void logOpenFile_single()
 {
     if(prog_options.logging==1) {
         fp_log_file_freq = fopen(CPU_FREQUENCY_LOGGING_FILE_single,"w");
         fp_log_file_Cstates = fopen(CSTATE_LOGGING_FILE_single,"w");
+        fp_log_file_temperature = fopen(CPU_TEMPERATURE_LOGGING_FILE_single, "w");
     } else if(prog_options.logging==2) {
         fp_log_file_freq = fopen(CPU_FREQUENCY_LOGGING_FILE_single,"a");
         fp_log_file_Cstates = fopen(CSTATE_LOGGING_FILE_single,"a");
+        fp_log_file_temperature = fopen(CPU_TEMPERATURE_LOGGING_FILE_single, "a");
     }
 }
 
@@ -65,6 +72,9 @@ void logCloseFile_single()
         //the above line puts a \n after every CSTATE is logged.
         fclose(fp_log_file_Cstates);
 
+        fprintf(fp_log_file_temperature, "\n");
+        //the above line puts a \n after every temperature is logged.
+        fclose(fp_log_file_temperature);
     }
 }
 
@@ -76,6 +86,9 @@ void logOpenFile_dual(int socket_num)
 
     char str_file2[100];
     snprintf(str_file2,100,CSTATE_LOGGING_FILE_dual,socket_num);
+
+    char str_file3[100];
+    snprintf(str_file3,100,CPU_TEMPERATURE_LOGGING_FILE_dual,socket_num);
 
     if(socket_num==0){
         if(prog_options.logging==1)
@@ -101,6 +114,19 @@ void logOpenFile_dual(int socket_num)
             fp_log_file_Cstates_2 = fopen(str_file2,"w");
         else if(prog_options.logging==2)
             fp_log_file_Cstates_2 = fopen(str_file2,"a");
+    }
+
+    if(socket_num==0){
+        if(prog_options.logging==1)
+            fp_log_file_temperature_1 = fopen(str_file3,"w");
+        else if(prog_options.logging==2)
+            fp_log_file_temperature_1 = fopen(str_file3,"a");
+    }
+    if(socket_num==1){
+        if(prog_options.logging==1)
+            fp_log_file_temperature_2 = fopen(str_file3,"w");
+        else if(prog_options.logging==2)
+            fp_log_file_temperature_2 = fopen(str_file3,"a");
     }
 }
 
@@ -138,6 +164,23 @@ void logCloseFile_dual(int socket_num)
                 fprintf(fp_log_file_Cstates_2,"\n");
                 //the above line puts a \n after every freq is logged.
             fclose(fp_log_file_Cstates_2);
+        }
+    }
+
+    if(socket_num==0){
+        if(prog_options.logging!=0){
+            if(prog_options.logging==2)
+                fprintf(fp_log_file_temperature_1,"\n");
+                //the above line puts a \n after every freq is logged.
+            fclose(fp_log_file_temperature_1);
+        }
+    }
+    if(socket_num==1){
+        if(prog_options.logging!=0){
+            if(prog_options.logging==2)
+                fprintf(fp_log_file_temperature_2,"\n");
+                //the above line puts a \n after every freq is logged.
+            fclose(fp_log_file_temperature_2);
         }
     }
 }
@@ -372,6 +415,146 @@ void logCpuCstates_dual_ts(struct timespec  *value, int socket_num) //HW use tim
         //below when just logging
         if(prog_options.logging != 0)
             fprintf(fp_log_file_Cstates_2,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+    }
+}
+
+
+
+void logCpuTemperature_single(float value)
+{
+    //below when just logging
+    if(prog_options.logging==1) {
+        fprintf(fp_log_file_temperature,"%f\n",value); //newline, replace \n with \t to get everything separated with tabs
+    }
+    //below when appending
+    if(prog_options.logging==2) {
+        fprintf(fp_log_file_temperature,"%f\t",value);
+    }
+}
+
+void logCpuFTemperature_single_c(char* value)
+{
+    //below when just logging
+    if(prog_options.logging==1) {
+        fprintf(fp_log_file_temperature,"%s\n",value); //newline, replace \n with \t to get everything separated with tabs
+    }
+    //below when appending
+    if(prog_options.logging==2) {
+        fprintf(fp_log_file_temperature,"%s\t",value);
+    }
+}
+
+void logCpuFTemperature_single_d(int value)
+{
+    //below when just logging
+    if(prog_options.logging==1) {
+        fprintf(fp_log_file_temperature,"%d\n",value); //newline, replace \n with \t to get everything separated with tabs
+    }
+    //below when appending
+    if(prog_options.logging==2) {
+        fprintf(fp_log_file_temperature,"%d\t",value);
+    }
+}
+
+// fix for issue 48, suggested by Hakan
+void logCpuTemperature_single_ts(struct timespec  *value) //HW use timespec to avoid floating point overflow
+{
+    //below when just logging
+    if(prog_options.logging==1) {
+        fprintf(fp_log_file_temperature,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+    }
+    //below when appending
+    if(prog_options.logging==2) {
+        fprintf(fp_log_file_temperature,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+    }
+}
+
+
+void logCpuTemperature_dual(float value,int socket_num)
+{
+    if(socket_num==0){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_1,"%f\n",value); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+            fprintf(fp_log_file_temperature_1,"%f\t",value);
+    }
+    if(socket_num==1){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_2,"%f\n",value); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+            fprintf(fp_log_file_temperature_2,"%f\t",value);
+    }
+}
+
+void logCpuTemperature_dual_c(char* value,int socket_num)
+{
+    if(socket_num==0){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_1,"%s\n",value); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+            fprintf(fp_log_file_temperature_1,"%s\t",value);
+    }
+    if(socket_num==1){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_2,"%s\n",value); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+            fprintf(fp_log_file_temperature_2,"%s\t",value);
+    }
+}
+
+void logCpuTemperature_dual_d(int value,int socket_num)
+{
+    if(socket_num==0){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_1,"%d\n",value); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+            fprintf(fp_log_file_temperature_1,"%d\t",value);
+    }
+    if(socket_num==1){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_2,"%d\n",value); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+            fprintf(fp_log_file_temperature_2,"%d\t",value);
+    }
+}
+
+void logCpuTemperature_dual_ts(struct timespec  *value, int socket_num) //HW use timespec to avoid floating point overflow
+{
+    if(socket_num==0){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_1,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+             fprintf(fp_log_file_temperature_1,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+    }
+    if(socket_num==1){
+        //below when just logging
+        if(prog_options.logging==1)
+            fprintf(fp_log_file_temperature_2,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+
+        //below when appending
+        if(prog_options.logging==2)
+             fprintf(fp_log_file_temperature_2,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
     }
 }
 
