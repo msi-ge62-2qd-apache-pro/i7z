@@ -84,8 +84,7 @@ float Read_Voltage_CPU(int cpu_num){
 
 
 
-void
-print_family_info (struct family_info *proc_info)
+void print_family_info (struct family_info *proc_info)
 {
     //print CPU info
     printf ("i7z DEBUG:    Stepping %x\n", proc_info->stepping);
@@ -347,7 +346,8 @@ void Print_Version_Information()
 
 
 //sets whether its nehalem or sandy bridge
-void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_bridge, bool* haswell)
+void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_bridge, 
+                                bool* haswell, bool* broadwell, bool* skylake, bool* kaby_lake)
 {
     struct family_info proc_info;
 
@@ -356,20 +356,6 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
 
     get_vendor (vendor_string);
     vendor_string[12] = '\0';
-
-    //look at the blurb below for why strcmp is done byte by byte
-    /*
-    bool equal_string = true;
-    char const* genuine_intel_str = "GenuineIntel";
-    int i;
-    for(i=0; i<12;i++) {
-        if (vendor_string[i] != genuine_intel_str[i])
-            equal_string = false;
-    }
-    */
-    // somehow using strcmp or strncmp is crashing the app when using -O2, -O3 with gcc-4.7
-    // (strncmp (vendor_string, "GenuineIntel",12) == 0)
-    // (strcmp (vendor_string, "GenuineIntel",12) == 0)
 
     if (strcmp (vendor_string, "GenuineIntel") == 0) {
     //if (equal_string) {
@@ -380,8 +366,8 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
         exit (1);
     }
 
-    get_familyinformation (&proc_info);
-    print_family_info (&proc_info);
+    get_familyinformation(&proc_info);
+    print_family_info(&proc_info);
 
     //printf("%x %x",proc_info.extended_model,proc_info.family);
 
@@ -489,12 +475,16 @@ void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_br
                 printf("i7z DEBUG: detected a newer model of ivy bridge processor\n");
                 sleep(5);
             }
-        } else {
-            printf ("i7z DEBUG: Unknown processor, not exactly based on Nehalem, Sandy bridge or Ivy Bridge\n");
+        } else if (proc_info.extended_model == 0x9){
+            printf("i7z DEBUG: Detected a sky/kaby lake - 14nm\n");
+        }
+
+        else {
+            printf ("i7z DEBUG: Unknown processor\n");
             //exit (1);
         }
     } else {
-        printf ("i7z DEBUG: Unknown processor, not exactly based on Nehalem\n");
+        printf ("i7z DEBUG: Unknown processor\n");
         printf ("If you are using an AMD processor, I highly recommend TurionPowerControl http://code.google.com/p/turionpowercontrol/\n");
         exit (1);
     }

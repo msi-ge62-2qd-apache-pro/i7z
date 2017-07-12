@@ -516,48 +516,10 @@ int main (int argc, char **argv)
 
     Print_Version_Information();
 
-    Print_Information_Processor (&prog_options.i7_version.nehalem, &prog_options.i7_version.sandy_bridge, &prog_options.i7_version.ivy_bridge, &prog_options.i7_version.haswell);
-
-//	printf("nehalem %d, sandy brdige %d\n", prog_options.i7_version.nehalem, prog_options.i7_version.sandy_bridge);
-
-    Test_Or_Make_MSR_DEVICE_FILES ();
+    Print_Information_Processor(&prog_options.i7_version.nehalem, &prog_options.i7_version.sandy_bridge, &prog_options.i7_version.ivy_bridge, &prog_options.i7_version.haswell, &prog_options.i7_version.broadwell, &prog_options.i7_version.skylake, &prog_options.i7_version.kaby_lake);
+    //return(0);
+    Test_Or_Make_MSR_DEVICE_FILES();
     modprobing_msr();
-
-    /*
-    prog_options.logging = 0;
-    if (logging_val_replace){
-        prog_options.logging = 1;
-        printf("Logging is ON and set to replace\n");
-    }
-    if (logging_val_append){
-        prog_options.logging = 2;
-        printf("Logging is ON and set to append\n");
-    }
-    */
-    /*
-    while( (c=getopt(argc,argv,"w:")) !=-1){
-		cvalue = optarg;
-    	//printf("argument %c\n",c);
-    	if(cvalue == NULL){
-    	    printf("With -w option, requires an argument for append or logging\n");
-    	    exit(1);
-    	}else{
-     	    //printf("         %s\n",cvalue);
-     	    if(strcmp(cvalue,"a")==0){
-     		printf("Appending frequencies to %s (single_socket) or cpu_freq_log_dual_(%d/%d).txt (dual socket)\n", CPU_FREQUENCY_LOGGING_FILE_single,0,1);
-     		prog_options.logging=2;
-     	    }else if(strcmp(cvalue,"l")==0){
-     		printf("Logging frequencies to %s (single socket) or cpu_freq_log_dual_(%d/%d).txt (dual socket) \n", CPU_FREQUENCY_LOGGING_FILE_single,0,1);
-     		prog_options.logging=1;
-     	    }else{
-     		printf("Unknown Option, ignoring -w option.\n");
-     		prog_options.logging=0;
-     	    }
-     	    sleep(3);
-        }
-    }
-    */
-    ///////////////////////////////////////////////////////////
 
     construct_CPU_Heirarchy_info(&chi);
     construct_sibling_list(&chi);
@@ -568,25 +530,9 @@ int main (int argc, char **argv)
 
     if (!use_ncurses){
         printf("GUI has been Turned OFF\n");
-        //print_options(prog_options);
     } else {
         printf("GUI has been Turned ON\n");
         init_ncurses();
-        //print_options(prog_options);
-        /*
-        if (prog_options.logging ==0)
-        {
-            printf("Logging is OFF\n");
-        } else {
-            printf("Logging is ON\n");
-            if (prog_options.cstatelogging) {
-                printf("Cstate logging is enabled\n");
-            }
-            if (prog_options.templogging) {
-                printf("temp logging is enabled\n");
-            }
-        }
-        */
     }
 
     if (!presupplied_socket_info){
