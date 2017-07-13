@@ -39,12 +39,23 @@ struct core_i7_version{
     bool kaby_lake;
 };
 
+enum cpu_arch{
+    NEHALEM = 0,
+    SANDY_BRIDGE,
+    IVY_BRIDGE,
+    HASWELL,
+    BROADWELL,
+    SKYLAKE,
+    KABY_LAKE
+};
+
 struct program_options{
     int logging; //0=no logging, 1=logging, 2=appending
     int templogging;
     int cstatelogging;
     //always put variables before the below structure, something fishy going on and the variable is reset
     struct core_i7_version i7_version;
+    enum cpu_arch arch;
 };
 
 /// Logging Functions
@@ -153,12 +164,12 @@ void get_siblings_list(struct cpu_heirarchy_info* chi);
 void get_package_ids(struct cpu_heirarchy_info* chi);
 void print_cpu_list(struct cpu_heirarchy_info chi);
 void construct_cpu_hierarchy(struct cpu_heirarchy_info *chi);
-void Print_Information_Processor(bool*, bool*, bool*, bool*, bool*, bool*, bool*);
+void Print_Information_Processor(struct program_options*);
 void Test_Or_Make_MSR_DEVICE_FILES();
 
 
-int check_and_return_processor(char*strinfo);
-int check_and_return_physical_id(char*strinfo);
+int check_and_return_processor(char* strinfo);
+int check_and_return_physical_id(char* strinfo);
 void construct_sibling_list(struct cpu_heirarchy_info* chi);
 void construct_socket_information(struct cpu_heirarchy_info* chi,
         struct cpu_socket_info* socket_0,struct cpu_socket_info* socket_1,

@@ -30,7 +30,7 @@ struct cpu_socket_info {
     int num_logical_cores;
 };
 
-int check_and_return_processor(char*strinfo)
+int check_and_return_processor(char* strinfo)
 {
     char *t1;
     if (strstr(strinfo,"processor") !=NULL) {
@@ -42,7 +42,7 @@ int check_and_return_processor(char*strinfo)
     }
 }
 
-int check_and_return_physical_id(char*strinfo)
+int check_and_return_physical_id(char* strinfo)
 {
     char *t1;
     if (strstr(strinfo,"physical id") !=NULL) {
@@ -54,7 +54,7 @@ int check_and_return_physical_id(char*strinfo)
     }
 }
 
-int check_and_return_core_id(char*strinfo)
+int check_and_return_core_id(char* strinfo)
 {
     char *t1;
     if (strstr(strinfo,"core id") !=NULL) {

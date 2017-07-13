@@ -516,11 +516,10 @@ int main (int argc, char **argv)
 
     Print_Version_Information();
 
-    Print_Information_Processor(&prog_options.i7_version.nehalem, &prog_options.i7_version.sandy_bridge, &prog_options.i7_version.ivy_bridge, &prog_options.i7_version.haswell, &prog_options.i7_version.broadwell, &prog_options.i7_version.skylake, &prog_options.i7_version.kaby_lake);
-    //return(0);
+    Print_Information_Processor(&prog_options);
+
     Test_Or_Make_MSR_DEVICE_FILES();
     modprobing_msr();
-
     construct_CPU_Heirarchy_info(&chi);
     construct_sibling_list(&chi);
     print_CPU_Heirarchy(chi);
