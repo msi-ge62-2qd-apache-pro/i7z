@@ -30,6 +30,11 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#ifdef __FreeBSD__
+#include <sys/cpuctl.h>
+#include <sys/ioctl.h>
+#include <sys/sysctl.h>
+#endif
 #include <time.h>
 #include <assert.h>
 #include <math.h>
@@ -44,6 +49,14 @@ bool E7_mp_present=false;
 #define IA32_THERM_STATUS 0x19C
 #define IA32_TEMPERATURE_TARGET 0x1a2
 #define IA32_PACKAGE_THERM_STATUS 0x1b1
+
+#ifdef __linux__
+#define	_DEV_CPU_MSR	"/dev/cpu/%d/msr"
+#define	_DEV_CPU0_MSR	"/dev/cpu/0/msr"
+#elif __FreeBSD__
+#define	_DEV_CPU_MSR	"/dev/cpuctl%d"
+#define	_DEV_CPU0_MSR	"/dev/cpuctl0"
+#endif
 
 int Get_Bits_Value(unsigned long val,int highbit, int lowbit){
 	unsigned long data = val;
@@ -84,7 +97,7 @@ float Read_Voltage_CPU(int cpu_num){
 
 
 
-void print_family_info(struct family_info *proc_info)
+void print_family_info (struct family_info *proc_info)
 {
     //print CPU info
     printf ("i7z DEBUG:    Stepping %x\n", proc_info->stepping);
@@ -96,36 +109,40 @@ void print_family_info(struct family_info *proc_info)
     //    printf("    Extended Family %d\n", proc_info->extended_family);
 }
 
-static inline void cpuid(unsigned int info, unsigned int *eax, unsigned int *ebx,
+static inline void cpuid (unsigned int info, unsigned int *eax, unsigned int *ebx,
                           unsigned int *ecx, unsigned int *edx)
 {
-    unsigned int _eax = info, _ebx, _ecx, _edx;
-    asm volatile ("mov %%ebx, %%edi;" // save ebx (for PIC)
-                  "cpuid;"
-                  "mov %%ebx, %%esi;" // pass to caller
-                  "mov %%edi, %%ebx;" // restore ebx
-                  :"+a" (_eax), "=S" (_ebx), "=c" (_ecx), "=d" (_edx)
-                  :      /* inputs: eax is handled above */
-                  :"edi" /* clobbers: we hit edi directly */);
+    unsigned int _eax, _ebx, _ecx, _edx;
+    asm volatile (
+#ifdef __i386__
+        "cpuid"
+        :"=a" (_eax), "=b" (_ebx), "=c" (_ecx), "=d" (_edx)
+#else
+        "xchgq %%rbx,%q1\n"
+        "cpuid\n"
+        "xchgq %%rbx,%q1"
+        :"=a" (_eax), "=r" (_ebx), "=c" (_ecx), "=d" (_edx)
+#endif
+        :"0" (info));
     if (eax) *eax = _eax;
     if (ebx) *ebx = _ebx;
     if (ecx) *ecx = _ecx;
     if (edx) *edx = _edx;
 }
 
-static inline void get_vendor(char *vendor_string)
+static inline void  get_vendor (char *vendor_string)
 {
     //get vendor name
     unsigned int a, b, c, d;
-    cpuid(0, &a, &b, &c, &d);
-    memcpy(vendor_string, &b, 4);
-    memcpy(&vendor_string[4], &d, 4);
-    memcpy(&vendor_string[8], &c, 4);
+    cpuid (0, &a, &b, &c, &d);
+    memcpy (vendor_string, &b, 4);
+    memcpy (&vendor_string[4], &d, 4);
+    memcpy (&vendor_string[8], &c, 4);
     vendor_string[12] = '\0';
-    printf("i7z DEBUG:    Vendor %s\n",vendor_string);
+    //        printf("Vendor %s\n",vendor_string);
 }
 
-int turbo_status()
+int turbo_status ()
 {
     //turbo state flag
     unsigned int eax;
@@ -136,7 +153,7 @@ int turbo_status()
     return ((eax & 0x2) >> 1);
 }
 
-static inline void get_familyinformation(struct family_info *proc_info)
+static inline void get_familyinformation (struct family_info *proc_info)
 {
     //get info about CPU
     unsigned int b;
@@ -150,7 +167,7 @@ static inline void get_familyinformation(struct family_info *proc_info)
     proc_info->extended_family = (b & 0x0FF00000) >> 20;	//bits 27:20
 }
 
-double estimate_MHz()
+double estimate_MHz ()
 {
     //copied blantantly from http://www.cs.helsinki.fi/linux/linux-kernel/2001-37/0256.html
     /*
@@ -169,12 +186,12 @@ double estimate_MHz()
     unsigned long long int cycles[2];		/* must be 64 bit */
     unsigned long long int microseconds;	/* total time taken */
 
-    memset(&tz, 0, sizeof (tz));
+    memset (&tz, 0, sizeof (tz));
 
     /* get this function in cached memory */
-    gettimeofday(&tvstart, &tz);
+    gettimeofday (&tvstart, &tz);
     cycles[0] = rdtsc ();
-    gettimeofday(&tvstart, &tz);
+    gettimeofday (&tvstart, &tz);
 
     /* we don't trust that this is any specific length of time */
     /*1 sec will cause rdtsc to overlap multiple times perhaps. 100msecs is a good spot */
@@ -230,7 +247,7 @@ int decdigits[] = {
 const char *program;
 
 
-uint64_t get_msr_value(int cpu, uint32_t reg, unsigned int highbit,
+uint64_t get_msr_value (int cpu, uint32_t reg, unsigned int highbit,
                         unsigned int lowbit, int* error_indx)
 {
     uint64_t data;
@@ -241,7 +258,7 @@ uint64_t get_msr_value(int cpu, uint32_t reg, unsigned int highbit,
     int bits;
     *error_indx =0;
 
-    sprintf (msr_file_name, "/dev/cpu/%d/msr", cpu);
+    sprintf (msr_file_name, _DEV_CPU_MSR, cpu);
     fd = open (msr_file_name, O_RDONLY);
     if (fd < 0)
     {
@@ -262,11 +279,21 @@ uint64_t get_msr_value(int cpu, uint32_t reg, unsigned int highbit,
         }
     }
 
+#ifdef __linux__
     if (pread (fd, &data, sizeof data, reg) != sizeof data)
     {
         perror ("rdmsr:pread");
         exit (127);
     }
+#elif __FreeBSD__
+    cpuctl_msr_args_t args;
+    args.msr = reg;
+    if (ioctl (fd, CPUCTL_RDMSR, &args) < 0) {
+        perror ("rdmsr:ioctl");
+        exit (127);
+    }
+    data = args.data;
+#endif
 
     close (fd);
 
@@ -289,12 +316,12 @@ uint64_t get_msr_value(int cpu, uint32_t reg, unsigned int highbit,
     return (data);
 }
 
-uint64_t set_msr_value(int cpu, uint32_t reg, uint64_t data)
+uint64_t set_msr_value (int cpu, uint32_t reg, uint64_t data)
 {
     int fd;
     char msr_file_name[64];
 
-    sprintf (msr_file_name, "/dev/cpu/%d/msr", cpu);
+    sprintf (msr_file_name, _DEV_CPU_MSR, cpu);
     fd = open (msr_file_name, O_WRONLY);
     if (fd < 0)
     {
@@ -311,11 +338,21 @@ uint64_t set_msr_value(int cpu, uint32_t reg, uint64_t data)
         }
     }
 
+#if __linux__
     if (pwrite (fd, &data, sizeof data, reg) != sizeof data)
     {
         perror ("wrmsr:pwrite");
         exit (127);
     }
+#elif __FreeBSD__
+    cpuctl_msr_args_t args;
+    args.msr = reg;
+    args.data = data;
+    if (ioctl (fd, CPUCTL_WRMSR, &args) < 0) {
+        perror ("wrmsr:ioctl");
+        exit (127);
+    }
+#endif
     close(fd);
     return(1);
 }
@@ -345,16 +382,20 @@ void Print_Version_Information()
 }
 
 
-void Print_Information_Processor(struct program_options* prog_options)
+//sets whether its nehalem or sandy bridge
+void Print_Information_Processor(bool* nehalem, bool* sandy_bridge, bool* ivy_bridge, 
+                                bool* haswell, bool* broadwell, bool* skylake, bool* kaby_lake)
 {
     struct family_info proc_info;
 
     char vendor_string[13];
     memset(vendor_string,0,13);
 
-    get_vendor(vendor_string);
+    get_vendor (vendor_string);
+    vendor_string[12] = '\0';
 
     if (strcmp (vendor_string, "GenuineIntel") == 0) {
+    //if (equal_string) {
         printf ("i7z DEBUG: Found Intel Processor\n");
     } else {
         printf
@@ -364,6 +405,8 @@ void Print_Information_Processor(struct program_options* prog_options)
 
     get_familyinformation(&proc_info);
     print_family_info(&proc_info);
+
+    //printf("%x %x",proc_info.extended_model,proc_info.family);
 
     //check if its nehalem or exit
     //Info from page 641 of Intel Manual 3B
@@ -394,85 +437,104 @@ void Print_Information_Processor(struct program_options* prog_options)
             {
             case 0xA:
                 printf ("i7z DEBUG: Detected a nehalem (i7) - 45nm\n");
-                prog_options->arch = NEHALEM;
                 break;
             case 0xE:
             case 0xF:
                 printf ("i7z DEBUG: Detected a nehalem (i7/i5/Xeon) - 45nm\n");
-                prog_options->arch = NEHALEM;
-                break;
+	        break;
             default:
                 printf ("i7z DEBUG: Unknown processor, not exactly based on Nehalem\n");
+                //exit (1);
             }
+   	    *nehalem = true;
+	    *sandy_bridge = false;
+	    *ivy_bridge = false;
+	    *haswell = true;
 
         } else if (proc_info.extended_model == 0x2) {
             switch (proc_info.model)
             {
             case 0xE:
                 printf ("i7z DEBUG: Detected a Xeon MP - 45nm (7500, 6500 series)\n");
-                prog_options->arch = NEHALEM;
-                break;
+		*nehalem = true;
+  	    	*sandy_bridge = false;
+		*ivy_bridge = false;
+                *haswell = false;
+		break;
             case 0xF:
                 printf ("i7z DEBUG: Detected a Xeon MP - 32nm (E7 series)\n");
-                prog_options->arch = NEHALEM;
-                E7_mp_present = true;
+	        *nehalem = true;
+  	        *sandy_bridge = false;
+		*ivy_bridge = false;
+                *haswell = false;
+  	        E7_mp_present = true;
                 break;
             case 0xC:
-                prog_options->arch = NEHALEM;
+	        *nehalem = true;
+  	        *sandy_bridge = false;
+		*ivy_bridge = false;
+                *haswell = false;
                 printf ("i7z DEBUG: Detected an i7/Xeon - 32 nm (westmere)\n");
                 break;
             case 0x5:
-               printf ("i7z DEBUG: Detected an i3/i5/i7 - 32nm (westmere - 1st generation core)\n");
-               prog_options->arch = NEHALEM;
-               break;
+	        *nehalem = true;
+  	        *sandy_bridge = false;
+		*ivy_bridge = false;
+                *haswell = false;
+	        printf ("i7z DEBUG: Detected an i3/i5/i7 - 32nm (westmere - 1st generation core)\n");
+	        break;
             case 0xD:
-                printf ("i7z DEBUG: Detected an i7 - 32nm (haven't seen this version around, do write to me with the model number)\n");
-                prog_options->arch = SANDY_BRIDGE;
-                break;
+	        *nehalem = false;
+	  	*sandy_bridge = true;
+		*ivy_bridge = false;
+                *haswell = false;
+		printf ("i7z DEBUG: Detected an i7 - 32nm (haven't seen this version around, do write to me with the model number)\n");
+	        break;
             }
         } else if (proc_info.extended_model == 0x3) {
             switch (proc_info.model)
             {
             case 0xA:
                 printf ("i7z DEBUG: Detected an i7 - 22nm (ivy bridge) \n");
-                prog_options->arch = IVY_BRIDGE;
+		*nehalem = false;
+  	    	*sandy_bridge = false;
+		*ivy_bridge = true;
+                *haswell = false;
                 break;
             case 0xC:
                 printf ("i7z DEBUG: Detected an i7 - 22nm (haswell)\n");
-                prog_options->arch = HASWELL;
+                *nehalem = false;
+                *sandy_bridge = false;
+                *ivy_bridge = false;
+                *haswell = true;
                 break;
             default:
                 printf("i7z DEBUG: detected a newer model of ivy bridge processor\n");
+                sleep(5);
             }
-
-        } else if (proc_info.extended_model == 0x4){
-            printf("i7z DEBUG: Detected a skylake - 14nm\n");
-            prog_options->arch = SKYLAKE;
         } else if (proc_info.extended_model == 0x9){
-            printf("i7z DEBUG: Detected a kaby lake - 14nm\n");
-            prog_options->arch = KABY_LAKE;
+            printf("i7z DEBUG: Detected a sky/kaby lake - 14nm\n");
         }
 
         else {
             printf ("i7z DEBUG: Unknown processor\n");
+            //exit (1);
         }
     } else {
         printf ("i7z DEBUG: Unknown processor\n");
         printf ("If you are using an AMD processor, I highly recommend TurionPowerControl http://code.google.com/p/turionpowercontrol/\n");
         exit (1);
     }
-    printf("prog_options : %i\n", prog_options);
-    printf("prog_options->arch : %i\n", &prog_options->arch);
 
 }
 
 void Test_Or_Make_MSR_DEVICE_FILES()
 {
     //test if the msr file exists
-    if (access ("/dev/cpu/0/msr", F_OK) == 0)
+    if (access (_DEV_CPU0_MSR, F_OK) == 0)
     {
-        printf ("i7z DEBUG: msr device files exist /dev/cpu/*/msr\n");
-        if (access ("/dev/cpu/0/msr", W_OK) == 0)
+        printf ("i7z DEBUG: msr device files exist %s\n", _DEV_CPU0_MSR);
+        if (access (_DEV_CPU0_MSR, W_OK) == 0)
         {
             //a system mght have been set with msr allowable to be written
             //by a normal user so...
@@ -487,9 +549,10 @@ void Test_Or_Make_MSR_DEVICE_FILES()
         printf ("i7z DEBUG: msr device files DO NOT exist, trying out a makedev script\n");
         if (geteuid () == 0)
         {
+#ifdef __linux__
             //Try the Makedev script
             //sourced from MAKEDEV-cpuid-msr script in msr-tools
-            int result = system ("msr_major=202; \
+            system ("msr_major=202; \
 							cpuid_major=203; \
 							n=0; \
 							while [ $n -lt 16 ]; do \
@@ -500,7 +563,10 @@ void Test_Or_Make_MSR_DEVICE_FILES()
 							done; \
 							");
             printf ("i7z DEBUG: modprobbing for msr\n");
-            result = system ("modprobe msr");
+            system ("modprobe msr");
+#elif __FreeBSD__
+            system ("kldload -n cpuctl");
+#endif
         } else {
             printf ("i7z DEBUG: You DO NOT have root privileges, mknod to create device entries won't work out\n");
             printf ("i7z DEBUG: A solution is to run this program as root\n");
@@ -508,25 +574,41 @@ void Test_Or_Make_MSR_DEVICE_FILES()
         }
     }
 }
-
+#ifdef __linux__
 double cpufreq_info()
 {
     //CPUINFO is wrong for i7 but correct for the number of physical and logical cores present
     //If Hyperthreading is enabled then, multiple logical processors will share a common CORE ID
     //http://www.redhat.com/magazine/022aug06/departments/tips_tricks/
-    int result = system("cat /proc/cpuinfo |grep MHz|sed 's/cpu\\sMHz\\s*:\\s//'|tail -n 1 > /tmp/cpufreq.txt");
+    system
+    ("cat /proc/cpuinfo |grep MHz|sed 's/cpu\\sMHz\\s*:\\s//'|tail -n 1 > /tmp/cpufreq.txt");
 
 
     //Open the parsed cpufreq file and obtain the cpufreq from /proc/cpuinfo
     FILE *tmp_file;
     tmp_file = fopen ("/tmp/cpufreq.txt", "r");
     char tmp_str[30];
-    fgets(tmp_str, 30, tmp_file);
-    result = fclose(tmp_file);
+    fgets (tmp_str, 30, tmp_file);
+    fclose (tmp_file);
     return atof(tmp_str);
 }
+#elif __FreeBSD__
+double cpufreq_info()
+{
+    struct clockinfo clock;
+    size_t len;
 
-int check_and_return_processor(char* strinfo)
+    len = sizeof(clock);
+    if (sysctlbyname ("hw.clockrate", &clock, &len, NULL, 0) == -1)
+    {
+        perror ("cpufreq_info:sysctl");
+        exit (127);
+    }
+    return (clock.hz);
+}
+#endif
+
+int check_and_return_processor(char*strinfo)
 {
     char *t1;
     if (strstr(strinfo,"processor") !=NULL) {
@@ -538,7 +620,7 @@ int check_and_return_processor(char* strinfo)
     }
 }
 
-int check_and_return_physical_id(char* strinfo)
+int check_and_return_physical_id(char*strinfo)
 {
     char *t1;
     if (strstr(strinfo,"physical id") !=NULL) {
@@ -550,7 +632,7 @@ int check_and_return_physical_id(char* strinfo)
     }
 }
 
-int check_and_return_core_id(char* strinfo)
+int check_and_return_core_id(char*strinfo)
 {
     char *t1;
     if (strstr(strinfo,"core id") !=NULL) {
@@ -651,6 +733,7 @@ void print_socket_information(struct cpu_socket_info* socket)
     printf("Socket-%d [num of cpus %d physical %d logical %d] %s\n",socket->socket_num,socket->max_cpu,socket->num_physical_cores,socket->num_logical_cores,socket_list);
 }
 
+#ifdef __linux__
 void construct_CPU_Heirarchy_info(struct cpu_heirarchy_info* chi)
 {
     FILE *fp = fopen("/proc/cpuinfo","r");
@@ -697,6 +780,51 @@ void construct_CPU_Heirarchy_info(struct cpu_heirarchy_info* chi)
     chi->max_online_cpu = it_processor_num+1;
     fclose(fp);
 }
+#elif __FreeBSD__
+void construct_CPU_Heirarchy_info(struct cpu_heirarchy_info* chi)
+{
+    int i;
+    FILE *fp = fopen("/var/run/dmesg.boot", "r");
+    char strinfo[200];
+    char *tmp;
+
+    int processor_num, physicalid_num = 0, coreid_num = 0;
+    int ncpu = 0, packages, cores, threads;
+
+    if (fp!=NULL) {
+        while ( fgets(strinfo,200,fp) != NULL) {
+            if (strstr(strinfo, "FreeBSD/SMP: ") != NULL) {
+                if ((tmp = strstr(strinfo, "Multiprocessor System Detected: ")) != NULL) {
+                    tmp = strchr(tmp, ':');
+                    tmp++; /* skip space */
+                    ncpu = atoi(tmp);
+                } else {
+                    tmp = strchr(strinfo, ' ');
+                    tmp++; /* skip space */
+                    packages = atoi(tmp);
+                    tmp = strchr(tmp, 'x');
+                    tmp++; /* skip space */
+                    cores = atoi(tmp);
+                    threads = ncpu / (packages * cores);
+                }
+            }
+        }
+        for (i = 0; i < ncpu; i++) {
+            processor_num = i;
+            if ((coreid_num + 1) == cores)
+                physicalid_num++;
+            physicalid_num %= packages;
+            coreid_num = processor_num % cores;
+
+            chi->processor_num[i] = processor_num;
+            chi->package_num[i] = physicalid_num;
+            chi->coreid_num[i] = coreid_num;
+        }
+    }
+    chi->max_online_cpu = ncpu;
+    fclose(fp);
+}
+#endif
 
 void print_CPU_Heirarchy(struct cpu_heirarchy_info chi)
 {

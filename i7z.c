@@ -227,11 +227,11 @@ void logCpuFreq_single_ts(struct timespec  *value) //HW use timespec to avoid fl
 {
     //below when just logging
     if(prog_options.logging==1) {
-        fprintf(fp_log_file_freq,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+        fprintf(fp_log_file_freq,"%jd.%.9ld\n",(intmax_t)value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
     //below when appending
     if(prog_options.logging==2) {
-        fprintf(fp_log_file_freq,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+        fprintf(fp_log_file_freq,"%jd.%.9ld\t",(intmax_t)value->tv_sec,value->tv_nsec);
     }
 }
 
@@ -307,20 +307,20 @@ void logCpuFreq_dual_ts(struct timespec  *value, int socket_num) //HW use timesp
     if(socket_num==0){
         //below when just logging
         if(prog_options.logging==1)
-            fprintf(fp_log_file_freq_1,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_freq_1,"%jd.%.9ld\n",(intmax_t)value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
 
         //below when appending
         if(prog_options.logging==2)
-             fprintf(fp_log_file_freq_1,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+             fprintf(fp_log_file_freq_1,"%jd.%.9ld\t",(intmax_t)value->tv_sec,value->tv_nsec);
     }
     if(socket_num==1){
         //below when just logging
         if(prog_options.logging==1)
-            fprintf(fp_log_file_freq_2,"%d.%.9d\n",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_freq_2,"%jd.%.9ld\n",(intmax_t)value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
 
         //below when appending
         if(prog_options.logging==2)
-             fprintf(fp_log_file_freq_2,"%d.%.9d\t",value->tv_sec,value->tv_nsec);
+             fprintf(fp_log_file_freq_2,"%jd.%.9ld\t",(intmax_t)value->tv_sec,value->tv_nsec);
     }
 }
 
@@ -358,7 +358,7 @@ void logCpuCstates_single_ts(struct timespec  *value) //HW use timespec to avoid
 {
     //below when just logging
     if(prog_options.logging != 0) {
-        fprintf(fp_log_file_Cstates,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+        fprintf(fp_log_file_Cstates,"%jd.%.9ld",(intmax_t)value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
 }
 
@@ -409,12 +409,12 @@ void logCpuCstates_dual_ts(struct timespec  *value, int socket_num) //HW use tim
     if(socket_num==0){
         //below when just logging
         if(prog_options.logging != 0)
-            fprintf(fp_log_file_Cstates_1,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_Cstates_1,"%jd.%.9ld",(intmax_t)value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
     if(socket_num==1){
         //below when just logging
         if(prog_options.logging != 0)
-            fprintf(fp_log_file_Cstates_2,"%d.%.9d",value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
+            fprintf(fp_log_file_Cstates_2,"%jd.%.9ld",(intmax_t)value->tv_sec,value->tv_nsec); //newline, replace \n with \t to get everything separated with tabs
     }
 }
 
@@ -569,7 +569,11 @@ void atexit_runsttysane()
 
 void modprobing_msr()
 {
+#ifdef __linux__
     system("modprobe msr");
+#elif __FreeBSD__
+    system("kldload -n cpuctl");
+#endif
 }
 
 void init_ncurses()

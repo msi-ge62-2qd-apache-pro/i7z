@@ -4,11 +4,8 @@
 
 #makefile updated from patch by anestling
 
-#explicitly disable two scheduling flags as they cause segfaults, two more seem to crash the GUI version so putting them
-#here 
-CFLAGS_FOR_AVOIDING_SEG_FAULT = -fno-schedule-insns2  -fno-schedule-insns -fno-inline-small-functions -fno-caller-saves
 CFLAGS ?= -O3
-CFLAGS += $(CFLAGS_FOR_AVOIDING_SEG_FAULT) -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DBUILD_MAIN -Wimplicit-function-declaration
+CFLAGS += -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DBUILD_MAIN
 
 LBITS := $(shell getconf LONG_BIT)
 ifeq ($(LBITS),64)
@@ -32,23 +29,17 @@ sbindir = $(prefix)/sbin/
 docdir = $(prefix)/share/doc/$(BIN)/
 mandir ?= $(prefix)/share/man/
 
-all: clean test_exist
+all: $(BIN)
 
-message:
-	@echo "If the compilation complains about not finding ncurses.h, install ncurses (libncurses5-dev on ubuntu/debian)"
-
-bin: message $(OBJ)
+$(BIN): $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(OBJ) $(LIBS)
 
 #http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=644728 for -ltinfo on debian
-static-bin: message $(OBJ)
+static-bin: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(OBJ) -static-libgcc -DNCURSES_STATIC -static -lpthread -lncurses -lrt -lm -ltinfo
 
-# perfmon-bin: message $(OBJ)
+# perfmon-bin: $(OBJ)
 # 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(PERFMON-BIN) perfmon-i7z.c helper_functions.c $(LIBS)
-
-test_exist: bin
-	@test -f i7z && echo 'Succeeded, now run sudo ./i7z' || echo 'Compilation failed'
 
 clean:
 	rm -f *.o $(BIN)
