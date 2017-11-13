@@ -587,6 +587,8 @@ void print_i7z_socket(struct cpu_socket_info socket_0, int printw_offset, int PL
         logCpuFreq_dual_ts(&global_ts, socket_0.socket_num);
 
 		logCpuCstates_dual_ts(&global_ts, socket_0.socket_num);
+
+        logCpuTemperature_dual_ts(&global_ts, socket_0.socket_num);
         
         for (ii = 0; ii < numCPUs; ii++)
         {
@@ -599,6 +601,8 @@ void print_i7z_socket(struct cpu_socket_info socket_0, int printw_offset, int PL
 			if ( (print_core[ii]) && !isinf(_FREQ[i]) ) {
 	        	logCpuFreq_dual(_FREQ[i],socket_0.socket_num);
             }
+
+            logCpuTemperature_dual(Read_Thermal_Status_CPU(i), socket_0.socket_num);
 
             logCpuCstates_dual_c(" [",socket_0.socket_num);
             logCpuCstates_dual((float)THRESHOLD_BETWEEN_0_100(C0_time[i] * 100),socket_0.socket_num);  logCpuCstates_dual_c(",",socket_0.socket_num);

@@ -78,6 +78,15 @@ void logCpuCstates_dual(float value, int);
 void logCpuCstates_dual_c(char* value, int);
 void logCpuCstates_dual_ts(struct timespec  *value, int) ;
 
+void logCpuTemperature_single(float value);
+void logCpuTemperature_single_c(char* value);
+void logCpuTemperature_single_d(int value);
+void logCpuTemperature_single_ts(struct timespec  *value) ;
+
+void logCpuTemperature_dual(float value, int);
+void logCpuTemperature_dual_c(char* value, int);
+void logCpuTemperature_dual_ts(struct timespec  *value, int) ;
+
 struct cpu_heirarchy_info {
     int max_online_cpu;
     int num_sockets;
