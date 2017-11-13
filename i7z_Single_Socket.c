@@ -770,7 +770,7 @@ void print_i7z_single ()
 
         //below code in (else case) is to handle when for 2 sockets system, cpu1 is populated and cpu0 is empty.
         //single socket code but in an intelligent manner and not assuming that cpu0 is always populated before cpu1
-        if(socket_0.max_cpu>1){
+        if(socket_0.max_cpu>=1){
             socket_num=0;
             print_i7z_socket_single(socket_0, printw_offset, PLATFORM_INFO_MSR,  PLATFORM_INFO_MSR_high, PLATFORM_INFO_MSR_low,
                                 online_cpus, cpu_freq_cpuinfo, one_second_sleep, TURBO_MODE, HT_ON_str, &kk_1, old_val_CORE[socket_num],
